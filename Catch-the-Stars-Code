@@ -1,0 +1,166 @@
+@namespace
+class SpriteKind:
+    Bonus = SpriteKind.create()
+"""
+
+Color array index
+
+"""
+"""
+
+Previous level step
+
+"""
+"""
+
+Current level step
+
+"""
+# Create a new sprite kind for Bonus items
+# Remove the bonus sprite
+
+def on_on_overlap(sprite, otherSprite):
+    # When player overlaps with Bonus item
+    music.play(music.melody_playable(music.power_up),
+        music.PlaybackMode.IN_BACKGROUND)
+    # Play power-up sound
+    info.change_score_by(2)
+    # Add +2 score
+    otherSprite.start_effect(effects.confetti, 200)
+    # Show confetti effect
+    otherSprite.say_text("+2", 200, False)
+    # Display "+2" text above the bonus
+    pause(100)
+    sprites.destroy(otherSprite)
+sprites.on_overlap(SpriteKind.player, SpriteKind.Bonus, on_on_overlap)
+
+# Destroy the enemy
+
+def on_on_overlap2(sprite3, otherSprite3):
+    # When player overlaps with Enemy
+    info.change_life_by(-1)
+    # Decrease life by 1
+    music.play(music.melody_playable(music.wawawawaa),
+        music.PlaybackMode.IN_BACKGROUND)
+    # Play hit sound
+    scene.camera_shake(4, 200)
+    # Shake the camera for effect
+    mySprite.start_effect(effects.halo)
+    # Show halo visual effect on player
+    sprites.destroy(otherSprite3)
+sprites.on_overlap(SpriteKind.player, SpriteKind.enemy, on_on_overlap2)
+
+# Add +1 score
+
+def on_on_overlap3(sprite2, otherSprite2):
+    # When player overlaps with Food item
+    music.play(music.melody_playable(music.ba_ding),
+        music.PlaybackMode.IN_BACKGROUND)
+    # Play item collect sound
+    sprites.destroy(otherSprite2)
+    # Destroy collected item
+    info.change_score_by(1)
+sprites.on_overlap(SpriteKind.player, SpriteKind.food, on_on_overlap3)
+
+# End the game with "LOSE" state
+
+def on_life_zero():
+    # Game over when life becomes zero
+    game.game_over(False)
+info.on_life_zero(on_life_zero)
+
+idx = 0
+lastStep = 0
+levelStep = 0
+myEnemy: Sprite = None
+mySprite2: Sprite = None
+mySprite3: Sprite = None
+mySprite: Sprite = None
+colors = [2, 4, 6, 8]
+# Array of background color values
+effects.star_field.start_screen_effect()
+# Start star field background effect
+mySprite = sprites.create(assets.image("""
+    Player
+    """), SpriteKind.player)
+# Create player sprite
+controller.move_sprite(mySprite)
+# Enable movement with arrow keys
+mySprite.set_stay_in_screen(True)
+# Prevent leaving the screen
+info.set_life(3)
+# Set player lives to 3
+music.set_volume(80)
+mySprite.say_text("Move with the arrow keys!", 1000, False)
+# Display guide message
+
+def on_forever():
+    global mySprite3, mySprite2
+    pause(max(200, 800 - info.score() * 30))
+    # Spawn faster as score increases
+    if randint(0, 10) < 2:
+        # 20% chance to spawn a Bonus item
+        mySprite3 = sprites.create(assets.image("""
+            Star
+            """), SpriteKind.Bonus)
+        mySprite3.x = randint(0, 160)
+        mySprite3.y = 0
+        mySprite3.vy = 30
+    else:
+        # Otherwise, spawn Food
+        mySprite2 = sprites.create(assets.image("""
+            Star
+            """), SpriteKind.food)
+        mySprite2.x = randint(0, 160)
+        mySprite2.y = 0
+        mySprite2.vy = 50
+forever(on_forever)
+
+def on_forever2():
+    # Remove Food sprites that fall off-screen
+    for value in sprites.all_of_kind(SpriteKind.food):
+        if value.y > scene.screen_height():
+            sprites.destroy(value)
+forever(on_forever2)
+
+def on_forever3():
+    # Remove Bonus sprites that fall off-screen
+    for value2 in sprites.all_of_kind(SpriteKind.Bonus):
+        if value2.y > scene.screen_height():
+            sprites.destroy(value2)
+forever(on_forever3)
+
+def on_forever4():
+    global myEnemy
+    # Spawn enemies that fall from above
+    pause(max(500, 1000 - info.score() * 15))
+    myEnemy = sprites.create(assets.image("""
+        Enemy
+        """), SpriteKind.enemy)
+    myEnemy.x = randint(10, 150)
+    myEnemy.y = -8
+    myEnemy.vy = 60 + info.score() * 2
+    if abs(myEnemy.x - mySprite.x) < 30:
+        myEnemy.x = (myEnemy.x + 50) % 160
+forever(on_forever4)
+
+def on_forever5():
+    # Remove enemies that fall off-screen
+    for value3 in sprites.all_of_kind(SpriteKind.enemy):
+        if value3.y > scene.screen_height():
+            sprites.destroy(value3)
+forever(on_forever5)
+
+def on_update_interval():
+    global levelStep, idx, lastStep
+    # Change background color based on score
+    levelStep = info.score() / 10
+    # One color change every 10 points
+    if levelStep != lastStep:
+        # Update only when reaching new step
+        idx = levelStep % len(colors)
+        # Loop through color array
+        scene.set_background_color(colors[idx])
+        # Set new background color
+        lastStep = levelStep
+game.on_update_interval(500, on_update_interval)
